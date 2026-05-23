@@ -1,56 +1,89 @@
 package CleitonRasta;
+
 import robocode.*;
 //import java.awt.Color;
-
-// API help : https://robocode.sourceforge.io/docs/robocode/robocode/Robot.html
 
 /**
  * OlhaAPedra - a robot by (your name here)
  */
-public class OlhaAPedra extends Robot
-{
+public class OlhaAPedra extends Robot {
+
+	String alvo = null;
+
 	/**
-	 * run: OlhaAPedra's default behavior
+	 * run: comportamento principal
 	 */
 	public void run() {
-		// Initialization of the robot should be put here
 
-		// After trying out your robot, try uncommenting the import at the top,
-		// and the next line:
+		// setColors(Color.red,Color.blue,Color.green);
 
-		// setColors(Color.red,Color.blue,Color.green); // body,gun,radar
-
-		// Robot main loop
 		while(true) {
-			// Replace the next 4 lines with any behavior you would like
-			ahead(100);
-			turnGunRight(360);
-			back(100);
-			turnGunRight(360);
+
+			// Se não tiver alvo, caça outro robô
+			if(alvo == null) {
+
+				turnGunRight(360);
+
+				// Movimento procurando inimigos
+				ahead(100);
+				turnRight(45);
+			}
+			else {
+
+				// Continua escaneando o alvo
+				turnGunRight(360);
+			}
 		}
 	}
 
 	/**
-	 * onScannedRobot: What to do when you see another robot
+	 * Quando encontrar um robô
 	 */
 	public void onScannedRobot(ScannedRobotEvent e) {
-		// Replace the next line with any behavior you would like
-		fire(1);
+
+		// Define alvo
+		alvo = e.getName();
+
+		// Mira no inimigo
+		turnGunRight(getHeading() - getGunHeading() + e.getBearing());
+
+		// Atira
+		fire(3);
+
+		// Movimento de strafing (movimento lateral)
+		turnRight(e.getBearing() + 90);
+
+		// Anda lateralmente
+		ahead(150);
 	}
 
 	/**
-	 * onHitByBullet: What to do when you're hit by a bullet
+	 * Quando o alvo morrer
+	 */
+	public void onRobotDeath(RobotDeathEvent e) {
+
+		// Procura outro alvo
+		if(e.getName().equals(alvo)) {
+			alvo = null;
+		}
+	}
+
+	/**
+	 * Quando levar tiro
 	 */
 	public void onHitByBullet(HitByBulletEvent e) {
-		// Replace the next line with any behavior you would like
-		back(10);
+
+		// Desvia
+		turnRight(90);
+		ahead(100);
 	}
-	
+
 	/**
-	 * onHitWall: What to do when you hit a wall
+	 * Quando bater na parede
 	 */
 	public void onHitWall(HitWallEvent e) {
-		// Replace the next line with any behavior you would like
-		back(20);
-	}	
+
+		back(50);
+		turnRight(90);
+	}
 }
