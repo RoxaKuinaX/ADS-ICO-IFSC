@@ -1,56 +1,153 @@
 package CleitonRasta;
+
 import robocode.*;
-//import java.awt.Color;
+import robocode.util.Utils;
+import java.awt.Color;
 
-// API help : https://robocode.sourceforge.io/docs/robocode/robocode/Robot.html
+public class OlhaAPedra extends AdvancedRobot {
 
-/**
- * OlhaAPedra - a robot by (your name here)
- */
-public class OlhaAPedra extends Robot
-{
-	/**
-	 * run: OlhaAPedra's default behavior
-	 */
-	public void run() {
-		// Initialization of the robot should be put here
+    int direcao = 1;
 
-		// After trying out your robot, try uncommenting the import at the top,
-		// and the next line:
+    public void run() {
 
-		// setColors(Color.red,Color.blue,Color.green); // body,gun,radar
+        // ===== VISUAL =====
+        setBodyColor(Color.BLACK);
+        setGunColor(Color.RED);
+        setRadarColor(Color.WHITE);
+        setBulletColor(Color.GREEN);
 
-		// Robot main loop
-		while(true) {
-			// Replace the next 4 lines with any behavior you would like
-			ahead(100);
-			turnGunRight(360);
-			back(100);
-			turnGunRight(360);
-		}
-	}
+        // ===== SISTEMA INDEPENDENTE =====
+        setAdjustGunForRobotTurn(true);
+        setAdjustRadarForGunTurn(true);
 
-	/**
-	 * onScannedRobot: What to do when you see another robot
-	 */
-	public void onScannedRobot(ScannedRobotEvent e) {
-		// Replace the next line with any behavior you would like
-		fire(1);
-	}
+        while(true) {
 
-	/**
-	 * onHitByBullet: What to do when you're hit by a bullet
-	 */
-	public void onHitByBullet(HitByBulletEvent e) {
-		// Replace the next line with any behavior you would like
-		back(10);
-	}
-	
-	/**
-	 * onHitWall: What to do when you hit a wall
-	 */
-	public void onHitWall(HitWallEvent e) {
-		// Replace the next line with any behavior you would like
-		back(20);
-	}	
+            // Radar infinito
+            setTurnRadarRight(999999);
+
+            execute();
+        }
+    }
+
+    public void onScannedRobot(ScannedRobotEvent e) {
+
+        // =========================
+        // RADAR TRAVADO NO INIMIGO
+        // =========================
+
+        double radarTurn =
+                getHeadingRadians()
+                + e.getBearingRadians()
+                - getRadarHeadingRadians();
+
+        setTurnRadarRightRadians(
+                2 * Utils.normalRelativeAngle(radarTurn)
+        );
+
+        // =========================
+        // MIRA MELHORADA
+        // =========================
+
+        // Predição simples do movimento inimigo
+        double bulletPower = Math.min(3.0, getEnergy());
+
+        double enemyVelocity = e.getVelocity();
+
+        double enemyHeading = e.getHeadingRadians();
+
+        double distance = e.getDistance();
+
+        double time = distance / (20 - 3 * bulletPower);
+
+        double futureX =
+                getX()
+                + Math.sin(e.getBearingRadians() + getHeadingRadians())
+                * distance
+                + Math.sin(enemyHeading) * enemyVelocity * time;
+
+        double futureY =
+                getY()
+                + Math.cos(e.getBearingRadians() + getHeadingRadians())
+                * distance
+                + Math.cos(enemyHeading) * enemyVelocity * time;
+
+        double absAngle =
+                Math.atan2(
+                        futureX - getX(),
+                        futureY - getY()
+                );
+
+        double gunTurn =
+                Utils.normalRelativeAngle(
+                        absAngle - getGunHeadingRadians()
+                );
+
+        setTurnGunRightRadians(gunTurn);
+
+        // =========================
+        // DESVIO DE BALAS
+        // =========================
+
+        // Movimento lateral
+        setTurnRight(e.getBearing() + 90);
+
+        // Troca direção aleatoriamente
+        if(Math.random() > 0.90) {
+
+            direcao *= -1;
+        }
+
+        // Movimento curto e imprevisível
+        setAhead((120 + Math.random() * 80) * direcao);
+
+        // =========================
+        // TIRO PRECISO
+        // =========================
+
+        // Só atira quando a arma estiver alinhada
+        if(getGunHeat() == 0
+                && Math.abs(getGunTurnRemaining()) < 3) {
+
+            // Tiro mais forte perto
+            if(distance < 150) {
+
+                fire(3);
+
+            } else if(distance < 300) {
+
+                fire(2);
+
+            } else {
+
+                fire(1);
+            }
+        }
+    }
+
+    public void onHitByBullet(HitByBulletEvent e) {
+
+        // Desvio agressivo ao tomar tiro
+        direcao *= -1;
+
+        setTurnRight(90 - e.getBearing());
+
+        setAhead(150 * direcao);
+    }
+
+    public void onHitWall(HitWallEvent e) {
+
+        direcao *= -1;
+
+        back(100);
+
+        turnRight(90);
+    }
+
+    public void onHitRobot(HitRobotEvent e) {
+
+        // Explode inimigo próximo
+        fire(3);
+
+        back(50);
+    }
 }
